@@ -152,15 +152,18 @@ backend:
 
   - task: "Task CRUD"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "GET /api/tasks, POST /api/tasks, PUT /api/tasks/:id implemented with project association"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Task CRUD operations fully functional. POST /api/tasks creates tasks with title, description, status, priority, project_id, assignee_id. GET /api/tasks returns tasks with project info, assignee details, subtasks, time_entries, and calculated total_time. PUT /api/tasks/:id updates task status (todo→in_progress→completed). All relationships working correctly."
 
   - task: "Time Tracking - Start Timer"
     implemented: true
