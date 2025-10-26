@@ -227,15 +227,18 @@ backend:
 
   - task: "Dashboard Stats"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "GET /api/dashboard/stats - Returns task counts by status and time stats (today/week/month)"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Dashboard statistics working correctly. GET /api/dashboard/stats returns taskStats (total, todo, in_progress, completed counts) and timeStats (today, week, month duration sums in minutes). Date filtering logic working for today/week/month calculations. Task status counting accurate."
 
 frontend:
   - task: "Authentication UI (Login/Signup)"
