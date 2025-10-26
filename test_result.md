@@ -212,15 +212,18 @@ backend:
 
   - task: "Time Tracking - Get All Entries"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "GET /api/time-entries - Returns all time entries with task info, supports task_id filter"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Time entries retrieval working perfectly. GET /api/time-entries returns all entries with task and user info, ordered by start_time descending. Optional task_id filter working correctly (?task_id=uuid). Includes duration, start_time, end_time. Task relationship data properly populated."
 
   - task: "Dashboard Stats"
     implemented: true
