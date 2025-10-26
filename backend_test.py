@@ -119,8 +119,7 @@ class FlowOpsAPITester:
         
         project_data = {
             "name": "FlowOps Test Project",
-            "description": "A test project for API validation",
-            "workspace_id": self.workspace_id or str(uuid.uuid4())  # Use workspace_id if available
+            "description": "A test project for API validation"
         }
         
         response = self.make_request("POST", "projects", project_data)
