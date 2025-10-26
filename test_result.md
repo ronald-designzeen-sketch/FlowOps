@@ -197,15 +197,18 @@ backend:
 
   - task: "Time Tracking - Get Active Timer"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/app/api/[[...path]]/route.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "GET /api/time-entries/active - Returns current running timer for user"
+      - working: true
+        agent: "testing"
+        comment: "✅ PASSED: Active timer retrieval working correctly. GET /api/time-entries/active returns current running timer for authenticated user with task and user info. Returns null when no active timer. Properly handles PGRST116 'not found' error code. User-specific filtering working correctly."
 
   - task: "Time Tracking - Get All Entries"
     implemented: true
