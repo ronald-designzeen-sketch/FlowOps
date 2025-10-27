@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Play, Pause, Clock, CheckCircle2, Circle, AlertCircle, Plus, LogOut, LayoutDashboard, ListTodo, Timer, Folder, Menu, X } from 'lucide-react'
+import { Play, Pause, Clock, CheckCircle2, Circle, AlertCircle, Plus, LogOut, LayoutDashboard, ListTodo, Timer, Folder, Menu, X, MessageSquare, Calendar, FileText, Settings, Send, Bell } from 'lucide-react'
 import { toast } from 'sonner'
 
 const App = () => {
@@ -34,10 +34,20 @@ const App = () => {
   const [timeEntries, setTimeEntries] = useState([])
   const [activeTimer, setActiveTimer] = useState(null)
   const [dashboardStats, setDashboardStats] = useState(null)
+  const [channels, setChannels] = useState([])
+  const [messages, setMessages] = useState([])
+  const [selectedChannel, setSelectedChannel] = useState(null)
+  const [meetings, setMeetings] = useState([])
+  const [docs, setDocs] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [workspace, setWorkspace] = useState(null)
   
   // Form states
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [newProjectOpen, setNewProjectOpen] = useState(false)
+  const [newChannelOpen, setNewChannelOpen] = useState(false)
+  const [newMeetingOpen, setNewMeetingOpen] = useState(false)
+  const [newDocOpen, setNewDocOpen] = useState(false)
   const [newTaskData, setNewTaskData] = useState({
     title: '',
     description: '',
@@ -49,6 +59,15 @@ const App = () => {
     name: '',
     description: ''
   })
+  const [newChannelData, setNewChannelData] = useState({ name: '' })
+  const [newMeetingData, setNewMeetingData] = useState({
+    title: '',
+    start_time: '',
+    end_time: '',
+    notes: ''
+  })
+  const [newDocData, setNewDocData] = useState({ title: '', content: '' })
+  const [messageInput, setMessageInput] = useState('')
   
   // Timer state
   const [timerDuration, setTimerDuration] = useState(0)
@@ -164,7 +183,18 @@ const App = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      
+
+      // Load workspace
+      const { data: membership } = await supabase
+        .from('workspace_members')
+        .select('workspace:workspaces(*)')
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (membership?.workspace) {
+        setWorkspace(membership.workspace)
+      }
+
       // Load projects
       const { data: projectsData } = await supabase
         .from('projects')
@@ -452,6 +482,112 @@ const App = () => {
     }
     return `${mins}m`
   }
+
+  const generateSeedData = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const { data: membership } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', session.user.id)
+        .single()
+
+      if (!membership) {
+        toast.error('No workspace found')
+        return
+      }
+
+      toast.info('Generating demo data...')
+
+      // Create demo projects
+      const { data: proj1 } = await supabase
+        .from('projects')
+        .insert([{
+          workspace_id: membership.workspace_id,
+          name: 'Website Redesign',
+          description: 'Redesigning the company website with modern UI/UX'
+        }])
+        .select()
+        .single()
+
+      const { data: proj2 } = await supabase
+        .from('projects')
+        .insert([{
+          workspace_id: membership.workspace_id,
+          name: 'Mobile App Development',
+          description: 'Building a cross-platform mobile application'
+        }])
+        .select()
+        .single()
+
+      const { data: proj3 } = await supabase
+        .from('projects')
+        .insert([{
+          workspace_id: membership.workspace_id,
+          name: 'Marketing Campaign',
+          description: 'Q4 marketing initiatives and campaigns'
+        }])
+        .select()
+        .single()
+
+      // Create demo tasks
+      const demoTasks = [
+        { project_id: proj1.id, title: 'Design homepage mockup', description: 'Create new homepage design in Figma', status: 'completed', priority: 'high' },
+        { project_id: proj1.id, title: 'Implement responsive navigation', description: 'Build mobile-friendly navigation component', status: 'in_progress', priority: 'high' },
+        { project_id: proj1.id, title: 'Optimize images', description: 'Compress and optimize all website images', status: 'todo', priority: 'medium' },
+        { project_id: proj2.id, title: 'Setup development environment', description: 'Configure React Native project', status: 'completed', priority: 'high' },
+        { project_id: proj2.id, title: 'Build authentication flow', description: 'Implement login and signup screens', status: 'in_progress', priority: 'high' },
+        { project_id: proj2.id, title: 'Design app icon', description: 'Create app icon for iOS and Android', status: 'todo', priority: 'low' },
+        { project_id: proj3.id, title: 'Plan social media strategy', description: 'Outline content calendar for Q4', status: 'in_progress', priority: 'medium' },
+        { project_id: proj3.id, title: 'Create email templates', description: 'Design email campaign templates', status: 'todo', priority: 'medium' },
+      ]
+
+      for (const task of demoTasks) {
+        await supabase.from('tasks').insert([{
+          ...task,
+          created_by: session.user.id,
+          assignee_id: session.user.id
+        }])
+      }
+
+      // Create a demo channel
+      await supabase.from('channels').insert([{
+        workspace_id: membership.workspace_id,
+        name: 'general'
+      }])
+
+      // Create a demo meeting
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(10, 0, 0, 0)
+      const meetingEnd = new Date(tomorrow)
+      meetingEnd.setHours(11, 0, 0, 0)
+
+      await supabase.from('meetings').insert([{
+        workspace_id: membership.workspace_id,
+        title: 'Weekly Team Standup',
+        start_time: tomorrow.toISOString(),
+        end_time: meetingEnd.toISOString(),
+        notes: 'Discuss weekly progress and blockers'
+      }])
+
+      // Create a demo document
+      await supabase.from('docs').insert([{
+        workspace_id: membership.workspace_id,
+        title: 'Project Guidelines',
+        content: 'This document outlines our project development guidelines and best practices.',
+        created_by: session.user.id
+      }])
+
+      toast.success('Demo data generated successfully!')
+      loadData()
+    } catch (error) {
+      console.error('Error generating seed data:', error)
+      toast.error('Error generating demo data')
+    }
+  }
   
   if (loading) {
     return (
@@ -581,6 +717,42 @@ const App = () => {
             <Folder className="h-4 w-4 mr-2" />
             Projects
           </Button>
+
+          <Button
+            variant={activeView === 'chat' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setActiveView('chat')}
+          >
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Chat
+          </Button>
+
+          <Button
+            variant={activeView === 'calendar' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setActiveView('calendar')}
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Calendar
+          </Button>
+
+          <Button
+            variant={activeView === 'docs' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setActiveView('docs')}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Docs
+          </Button>
+
+          <Button
+            variant={activeView === 'admin' ? 'secondary' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setActiveView('admin')}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Admin
+          </Button>
         </nav>
         
         <div className="p-4 border-t border-border">
@@ -613,6 +785,10 @@ const App = () => {
               {activeView === 'tasks' && 'Tasks'}
               {activeView === 'time-tracking' && 'Time Tracking'}
               {activeView === 'projects' && 'Projects'}
+              {activeView === 'chat' && 'Chat'}
+              {activeView === 'calendar' && 'Calendar'}
+              {activeView === 'docs' && 'Docs'}
+              {activeView === 'admin' && 'Admin'}
             </h1>
           </div>
           
@@ -635,8 +811,14 @@ const App = () => {
               </div>
             </Card>
           )}
-          
+
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
+              )}
+            </Button>
             {activeView === 'tasks' && (
               <Dialog open={newTaskOpen} onOpenChange={setNewTaskOpen}>
                 <DialogTrigger asChild>
@@ -1091,6 +1273,145 @@ const App = () => {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+
+          {activeView === 'chat' && (
+            <div className="h-full flex">
+              <div className="w-64 border-r border-border p-4 space-y-2">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-semibold">Channels</h2>
+                  <Button size="sm" variant="ghost">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Chat feature coming soon! Create channels and communicate with your team in real-time.
+                </p>
+              </div>
+              <div className="flex-1 flex flex-col">
+                <div className="flex-1 p-6 overflow-y-auto">
+                  <div className="text-center py-20 text-muted-foreground">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Select a channel to start messaging</p>
+                  </div>
+                </div>
+                <div className="p-4 border-t border-border">
+                  <div className="flex gap-2">
+                    <Input placeholder="Type a message..." className="flex-1" />
+                    <Button size="icon">
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeView === 'calendar' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Upcoming Meetings</CardTitle>
+                  <CardDescription>Schedule and manage your meetings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="mb-4">No meetings scheduled yet</p>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Schedule Meeting
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeView === 'docs' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Documents</CardTitle>
+                  <CardDescription>Create and manage team documents</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="mb-4">No documents yet</p>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Document
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeView === 'admin' && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Workspace Settings</CardTitle>
+                  <CardDescription>Manage your workspace and team members</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-medium mb-2">Workspace Information</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between py-2 border-b">
+                          <span className="text-sm text-muted-foreground">Workspace Name</span>
+                          <span className="text-sm font-medium">{workspace?.name || 'Loading...'}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b">
+                          <span className="text-sm text-muted-foreground">Created</span>
+                          <span className="text-sm font-medium">
+                            {workspace?.created_at ? new Date(workspace.created_at).toLocaleDateString() : '-'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-medium mb-2">Statistics</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-4 border rounded-lg">
+                          <div className="text-2xl font-bold">{projects.length}</div>
+                          <div className="text-xs text-muted-foreground">Projects</div>
+                        </div>
+                        <div className="p-4 border rounded-lg">
+                          <div className="text-2xl font-bold">{tasks.length}</div>
+                          <div className="text-xs text-muted-foreground">Tasks</div>
+                        </div>
+                        <div className="p-4 border rounded-lg">
+                          <div className="text-2xl font-bold">{timeEntries.filter(e => e.duration).length}</div>
+                          <div className="text-xs text-muted-foreground">Time Entries</div>
+                        </div>
+                        <div className="p-4 border rounded-lg">
+                          <div className="text-2xl font-bold">
+                            {formatMinutes(timeEntries.reduce((sum, e) => sum + (e.duration || 0), 0))}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Total Time</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t">
+                      <h3 className="font-medium mb-3">Quick Actions</h3>
+                      <div className="space-y-2">
+                        <Button onClick={generateSeedData} className="w-full" variant="outline">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Generate Demo Data
+                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                          Creates sample projects, tasks, meetings, and documents to explore the platform
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
